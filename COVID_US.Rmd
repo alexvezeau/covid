@@ -1,0 +1,388 @@
+---
+title: "COVID_US"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: inline
+always_allow_html: true
+---
+
+>  Marcelo Ponce, Amit Sandhel (2020). covid19.analytics: An R Package
+>  to Obtain, Analyze and Visualize Data from the Corona Virus Disease
+>  Pandemic. URL https://arxiv.org/abs/2009.01091
+
+## Analysis of current COVID data and predictions ##  
+
+```{r}
+rm(list = ls())
+```
+
+```{r initialisation_librairies, results="hide", echo=FALSE, include=FALSE}
+library(ggplot2)
+library(forecast)
+library(fpp2)
+library(TTR)
+library(dplyr)
+library(tstools)
+library(RCurl)
+library(tidyverse)
+library(covid19.analytics)
+library(prophet)
+library(lubridate)
+library(dygraphs)
+library(rjson)
+library(jsonlite)
+library(listviewer)
+library(rstudioapi)
+library(rlist)
+```
+
+
+```{r constants,results="hide", echo=FALSE, include=FALSE}
+predictionDays <- 90
+country <- "US"
+population <- 328200000
+noCache <- TRUE
+```
+
+
+
+
+```{r load_data, results="hide", echo=FALSE, include=FALSE }
+if (noCache) {
+  covid <- read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+  allStatesHistory <- read_csv("https://covidtracking.com/data/download/all-states-history.csv")
+  na <- filter(covid, continent == "North America")
+  canada <- filter(na, location == "Canada")
+  usa <- filter(na, location == "United States")
+  ag <- covid19.data(case = "aggregated")
+  tsc <- covid19.data(case = "ts-confirmed")
+  tsd <- covid19.data(case = "ts-deaths")
+  tsca <- covid19.data(case = "ts-ALL")
+  json_file <- "https://coronavirus.jhu.edu/datasets/state_timeline.json"
+  john_hopkins <- fromJSON(paste(readLines(json_file), collapse = ""))
+  florida_new_deaths <- john_hopkins[["Florida"]][["values"]][["new-deaths"]]
+  florida_new_cases <- john_hopkins[["Florida"]][["values"]][["new-confirmed-cases"]]
+}
+```
+
+```{r}
+print(paste("Data dated from: ", max(usa$date)))
+```
+```{r}
+allStatesHistory$hospitalizedCurrently[is.na(allStatesHistory$hospitalizedCurrently)] <- 0
+allStatesHistory$inIcuCurrently[is.na(allStatesHistory$inIcuCurrently)] <- 0
+allStatesHistory$onVentilatorCurrently[is.na(allStatesHistory$onVentilatorCurrently)] <- 0
+currentlyHosp <- allStatesHistory %>%
+  group_by(date) %>%
+  summarise(.groups = "drop", Hosp = sum(as.numeric(hospitalizedCurrently)), icu = sum(as.numeric(inIcuCurrently)), vent = sum(as.numeric(onVentilatorCurrently)))
+plot(currentlyHosp$date, currentlyHosp$Hosp, type = "l", col = "red", xlab = "Date", ylab = "Cases", main = "Hospitalisations US")
+lines(currentlyHosp$date, currentlyHosp$icu, col = "green")
+lines(currentlyHosp$date, currentlyHosp$vent, col = "blue")
+legend(c("topleft"), 100000, legend = c("Normal Care", "ICU", "On Ventillator"), col = c("red", "green", "blue"), lty = 1:1, cex = 0.8)
+```
+```{r}
+plot(currentlyHosp$date, currentlyHosp$icu, type = "l", col = "green", xlab = "Date", ylab = "Cases", main = "ICU/Ventilator US")
+lines(currentlyHosp$date, currentlyHosp$vent, col = "blue")
+legend(c("topleft"), 100000, legend = c("ICU", "On Ventillator"), col = c("green", "blue"), lty = 1:1, cex = 0.8)
+```
+
+
+```{r plot_total_Deaths}
+usa$total_deaths[is.na(usa$total_deaths)] <- 0
+plot(usa$total_deaths, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "US - Total Deaths", col = "red")
+```
+
+```{r}
+options(scipen = 999)
+usa$total_cases[is.na(usa$total_cases)] <- 0
+plot(format(usa$total_cases, scientific = FALSE), ylab = "Number Cases", xlab = "Day", xlim = c(0, 450), main = "US - Total Cases", ylim = c(min(usa$total_cases), max(usa$total_cases)), cex.axis = 0.75, col = "red")
+```
+
+```{r}
+plot(usa$new_deaths, ylab = "Number Deaths", ylim = c(0, 5000), xlab = "Day", xlim = c(0, 450), main = "US - Deaths / Day", col = "red")
+```
+
+```{r}
+plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, 350000), xlab = "Day", xlim = c(0, 450), main = "US - New Cases / Day", col = "red")
+```
+
+```{r}
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 90000), cex.axis = 0.75)
+points(usa$total_cases_per_million, col = "red")
+legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, 2000), cex.axis = 0.75)
+points(usa$total_deaths_per_million, col = "red")
+legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+
+```{r}
+plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, 450), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, 1000), cex.axis = 0.75)
+points(usa$new_cases_per_million, col = "red")
+legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+plot(canada$new_deaths_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, 450), main = "New Deaths/1 Million Population per Day", col = "green", ylim = c(0, 15), cex.axis = 0.75)
+points(usa$new_deaths_per_million, col = "red")
+legend(1, 15, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+tsUs <- ts(usa$new_deaths_per_million, start = 50, class = "ts")
+plot(forecast(auto.arima(tsUs), h = 90), sub = "Forecast 90 Days", ylab = "Nb of Deaths per million per Day", xlab = "Days")
+```
+
+```{r}
+tsUS2 <- ts(usa$new_deaths, start = 50, class = "ts")
+plot(forecast(auto.arima(tsUS2), h = 90), sub = "Forecast 90 Days", ylab = "Nb of Deaths per Day", xlab = "Days")
+```
+
+
+```{r results="hide"}
+tsc_us <- tsc %>% filter(Country.Region == country)
+tsc_us <- data.frame(t(tsc_us))
+tsc_us <- cbind(rownames(tsc_us), data.frame(tsc_us, row.names = NULL))
+colnames(tsc_us) <- c("Date", "Confirmed")
+tsc_us <- tsc_us[-c(1:4), ]
+tsc_us$Date <- ymd(tsc_us$Date)
+tsc_us$Confirmed <- as.numeric(tsc_us$Confirmed)
+```
+
+```{r results="hide"}
+tsd_us <- tsd %>% filter(Country.Region == country)
+tsd_us <- data.frame(t(tsd_us))
+tsd_us <- cbind(rownames(tsd_us), data.frame(tsd_us, row.names = NULL))
+colnames(tsd_us) <- c("Date", "Confirmed")
+tsd_us <- tsd_us[-c(1:4), ]
+tsd_us$Date <- ymd(tsd_us$Date)
+tsd_us$Confirmed <- as.numeric(tsd_us$Confirmed)
+```
+
+```{r}
+qplot(Date, Confirmed, data = tsc_us, main = paste("Covid19 - Number of confirmed Cases in ", country))
+```
+
+```{r}
+qplot(Date, Confirmed, data = tsd_us, main = paste("Covid19 - Number of confirmed deaths in ", country))
+```
+```{r}
+qplot(dt, cumulative, data = florida_new_cases, main = paste("Covid19 - Number of confirmed cases in ", "Florida"))
+```
+
+```{r}
+qplot(as.Date(dt), cumulative, data = florida_new_deaths, main = paste("Covid19 - Number of confirmed deaths in ", "Florida"))
+```
+
+```{r}
+ds <- tsc_us$Date
+y <- tsc_us$Confirmed
+df <- data.frame(ds, y)
+colnames(df) <- c("ds", "y")
+
+ds2 <- tsd_us$Date
+y2 <- tsd_us$Confirmed
+df2 <- data.frame(ds2, y2)
+colnames(df2) <- c("ds", "y")
+
+dsFlDeaths <- florida_new_deaths$dt
+yFlDeaths <- florida_new_deaths$cumulative
+dfFlDeaths <- data.frame(dsFlDeaths, yFlDeaths)
+colnames(dfFlDeaths) <- c("ds", "y")
+
+dsFlCases <- florida_new_cases$dt
+yFlCases <- florida_new_cases$cumulative
+dfFlCases <- data.frame(dsFlCases, yFlCases)
+colnames(dfFlCases) <- c("ds", "y")
+
+tsd_us$delta <- c(NA, diff(tsd_us$Confirmed, lag = 1))
+tsd_us$month <- format(as.Date(tsd_us$Date), "%y-%m")
+tsd_us$week <- paste(format(as.Date(tsd_us$Date), "%y-"), str_pad(week(as.Date(tsd_us$Date)), 2, pad = "0"))
+tsd_us$day <- weekdays(as.Date(tsd_us$Date))
+tsd_us$delta[is.na(tsd_us$delta)] <- 0
+
+totalMortsMois <- tsd_us %>%
+  group_by(month) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop")
+
+tsc_us$delta <- c(NA, diff(tsc_us$Confirmed, lag = 1))
+tsc_us$month <- format(as.Date(tsc_us$Date), "%y-%m")
+tsc_us$week <- paste(format(as.Date(tsc_us$Date), "%y-"), str_pad(week(as.Date(tsc_us$Date)), 2, pad = "0"))
+tsc_us$day <- weekdays(as.Date(tsc_us$Date))
+tsc_us$delta[is.na(tsc_us$delta)] <- 0
+
+totalCasMois <- tsc_us %>%
+  group_by(month) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop")
+
+bp <- barplot(totalMortsMois$Total, main = "Total New Deaths Per Month", xlab = "Month", ylab = "Total of Deaths", names.arg = totalMortsMois$month, ylim = c(0, max(totalMortsMois$Total) + 40000), las = 2)
+text(x = bp, y = totalMortsMois$Total, label = totalMortsMois$Total, pos = 3, cex = 0.8, col = "red")
+```
+
+```{r}
+bp <- barplot(totalCasMois$Total, main = "Total New Cases Per Month", xlab = "Month", ylab = "Total of Cases", names.arg = totalCasMois$month, ylim = c(0, max(totalCasMois$Total) + 2000000), las = 2)
+text(x = bp, y = totalCasMois$Total, label = totalCasMois$Total, pos = 3, cex = 0.6, col = "red")
+```
+
+
+```{r}
+totalDeathsweek <- tsd_us %>%
+  group_by(week) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop")
+
+
+bp2 <- barplot(totalDeathsweek$Total, main = "Total New Deaths Per Week", xlab = "Week", ylab = "Total of Deaths", names.arg = totalDeathsweek$week, ylim = c(0, max(totalDeathsweek$Total) + 10000), cex.names = 0.6, las = 2)
+text(x = bp2, y = totalDeathsweek$Total, label = totalDeathsweek$Total, pos = 3, cex = 0.5, col = "red", srt = 90)
+```
+```{r}
+totalCasesweek <- tsc_us %>%
+  group_by(week) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop")
+
+
+bp2 <- barplot(totalCasesweek$Total, main = "Total New Cases Per Week", xlab = "Week", ylab = "Total of Cases", names.arg = totalCasesweek$week, ylim = c(0, max(totalCasesweek$Total) + 250000), las = 2)
+text(x = bp2, y = totalCasesweek$Total, label = totalCasesweek$Total, pos = 3, cex = 0.5, col = "red", srt = 90)
+```
+
+
+```{r}
+totalDeathsDayofweek <- tsd_us %>%
+  group_by(day) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop") %>%
+  arrange(Total)
+
+
+bp3 <- barplot(totalDeathsDayofweek$Total, main = "Total Deaths Per Day", xlab = "Day", ylab = "Total of Deaths", names.arg = substr(totalDeathsDayofweek$day, 1, 3), ylim = c(0, max(totalDeathsDayofweek$Total) + 5000))
+text(x = bp3, y = totalDeathsDayofweek$Total, label = totalDeathsDayofweek$Total, pos = 3, cex = 0.5, col = "red")
+```
+
+```{r}
+totalCasesDayofweek <- tsc_us %>%
+  group_by(day) %>%
+  summarise(Total = sum(as.numeric(delta)), .groups = "drop") %>%
+  arrange(Total)
+
+
+bp3 <- barplot(totalCasesDayofweek$Total, main = "Total Cases Per Day", xlab = "Day", ylab = "Total of Cases", names.arg = substr(totalCasesDayofweek$day, 1, 3), ylim = c(0, max(totalCasesDayofweek$Total) + 500000))
+text(x = bp3, y = totalCasesDayofweek$Total, label = totalCasesDayofweek$Total, pos = 3, cex = 0.5, col = "red")
+```
+
+```{r}
+dfChunkedFl <- dfFlCases[-(1:70), , drop = FALSE]
+mFl <- prophet(dfChunkedFl, yearly.seasonality = F, daily.seasonality = F)
+futureFl <- make_future_dataframe(mFl, periods = predictionDays)
+forcastFl <- predict(mFl, futureFl)
+plot(mFl, forcastFl, xlabel = "Date", ylabel = "Cases") + ggtitle(paste("Florida", " - Predicted Covid Cases ", predictionDays, " days"))
+```
+
+```{r}
+df2ChunkedFl <- dfFlDeaths[-(1:70), , drop = FALSE]
+m2Fl <- prophet(df2ChunkedFl, yearly.seasonality = F, daily.seasonality = F)
+future2Fl <- make_future_dataframe(m2Fl, periods = predictionDays)
+forcast2Fl <- predict(m2Fl, future2Fl)
+plot(m2Fl, forcast2Fl, xlabel = "Date", ylabel = "Deaths") + ggtitle(paste("Florida", " - Predicted Covid Deaths ", predictionDays, " days"))
+```
+
+```{r}
+dfChunked <- df[-(1:100), , drop = FALSE]
+m <- prophet(dfChunked, yearly.seasonality = F, daily.seasonality = F)
+future <- make_future_dataframe(m, periods = predictionDays)
+forcast <- predict(m, future)
+plot(m, forcast, xlabel = "Date", ylabel = "Cases") + ggtitle(paste(country, " - Predicted Covid Cases ", predictionDays, " days"))
+```
+
+```{r}
+dfChunked2 <- df2[-(1:100), , drop = FALSE]
+m2 <- prophet(dfChunked2, yearly.seasonality = F, daily.seasonality = F)
+future2 <- make_future_dataframe(m2, periods = predictionDays)
+forcast2 <- predict(m2, future2)
+plot(m2, forcast2, xlabel = "Date", ylabel = "Deaths") + ggtitle(paste("US - Predicted Covid Deaths ", predictionDays, " days"))
+```
+
+
+```{r}
+dfChunked2 <- df2[-(1:100), , drop = FALSE]
+m2 <- prophet(dfChunked2, yearly.seasonality = F, daily.seasonality = F)
+future2 <- make_future_dataframe(m2, periods = predictionDays)
+forcast2 <- predict(m2, future2)
+plot(m2, forcast2, xlabel = "Date", ylabel = "Deaths") + ggtitle(paste("US - Predicted Covid Deaths ", predictionDays, " days")) + geom_hline(aes(yintercept = 405399, linetype = "1-WW2 Total Deaths (405 399)"), color = "red") + geom_hline(aes(yintercept = 291557, linetype = "2-WW2 Soldier Deaths (291 557)"), color = "blue") +
+  geom_hline(aes(yintercept = 116516, linetype = "3-WW1 Total Deaths (116 516)"), color = "green") +
+  scale_linetype_manual(name = "Events in US History", values = c(2, 2, 2), guide = guide_legend(override.aes = list(color = c("red", "blue", "green"))))
+```
+
+```{r}
+dyplot.prophet(m2Fl, forcast2Fl,
+  main = paste("Florida - Predicted Covid Cases ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Cases"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+
+
+
+```{r}
+dyplot.prophet(m, forcast,
+  main = paste(country, " - Predicted Covid Cases ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Cases"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+```{r}
+dyplot.prophet(mFl, forcastFl,
+  main = paste("Florida", " - Predicted Covid Deaths ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Deaths"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+
+
+```{r}
+dyplot.prophet(m2, forcast2,
+  main = paste(country, " - Predicted Covid Deaths ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Deaths"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+# FB Prophet #  
+
+## US Cases ##  
+
+```{r}
+prophet_plot_components(m, forcast)
+```
+## US Deaths ##  
+
+```{r}
+prophet_plot_components(m2, forcast2)
+```
+
+
+```{r}
+l <- nrow(dfChunked)
+pred <- forcast$yhat[1:l]
+actual <- m$history$y
+plot(actual, pred, main = paste(country, " Cases - Prediction vs Actual"))
+abline(lm(pred ~ actual), col = "red")
+```
+
+```{r}
+pred2 <- forcast2$yhat[1:l]
+actual2 <- m2$history$y
+plot(actual2, pred2, main = paste(country, " Deaths - Prediction vs Actual"))
+abline(lm(pred2 ~ actual2), col = "red")
+```
+
+```{r}
+summary(lm(pred ~ actual))
+```
+
+```{r}
+summary(lm(pred2 ~ actual2))
+```
+
+
+rmarkdown::render("C:/BIGDATA/LEARNING/PERSONNAL/COVID/COVID_US.Rmd")

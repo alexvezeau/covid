@@ -1,0 +1,407 @@
+---
+title: "COVID CANADA"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: inline
+---
+
+> Marcelo Ponce, Amit Sandhel (2020). covid19.analytics: An R Package to Obtain, Analyze and Visualize Data from the Corona Virus Disease Pandemic. URL <https://arxiv.org/abs/2009.01091>
+
+## Analysis of current COVID data and predictions
+
+```{r include=FALSE}
+rm(list = ls())
+```
+
+```{r initialisation_librairies, include=FALSE, results="hide"}
+library(ggplot2)
+library(forecast)
+library(fpp2)
+library(TTR)
+library(dplyr)
+library(tstools)
+library(RCurl)
+library(tidyverse)
+library(covid19.analytics)
+library(prophet)
+library(lubridate)
+library(dygraphs)
+```
+
+```{r constants}
+predictionDays <- 90
+country <- "Canada"
+population <- 37590000
+noCache <- TRUE
+
+
+```
+
+
+```{r load_data, include=FALSE, results="hide"}
+if (noCache) {
+  covid <- read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+  na <- filter(covid, continent == "North America")
+  canada <- filter(na, location == "Canada")
+  usa <- filter(na, location == "United States")
+  ag <- covid19.data(case = "aggregated")
+  tsc <- covid19.data(case = "ts-confirmed")
+  tsd <- covid19.data(case = "ts-deaths")
+  tsca <- covid19.data(case = "ts-ALL")
+  download <- getURL("https://msss.gouv.qc.ca/professionnels/statistiques/documents/covid19/COVID19_Qc_HistoHospit.csv", ssl.verifypeer = FALSE)
+  hosp_quebec <- read.csv(text = download)
+  hosp_quebec <- hosp_quebec %>% rename("Date" = "ï..Date")
+  hosp_quebec$Date <- as.Date(hosp_quebec$Date, "%m/%d/%Y")
+  hosp_quebec <- hosp_quebec[order(hosp_quebec$Date), ]
+  download <- getURL("https://cdn-contenu.quebec.ca/cdn-contenu/sante/documents/Problemes_de_sante/covid-19/csv/decesquotidien.csv", ssl.verifypeer = FALSE)
+  deces_quebec <- read.csv(text = download, sep = ";")
+  deces_quebec <- deces_quebec %>% rename("Date" = "ï..Date.de.dÃ.cÃ.s")
+  deces_quebec <- deces_quebec %>% rename("Moyenne7jours" = "Moyenne.mobile.sur.7.jours..centrÃ.e.")
+  deces_quebec$total_jour <- deces_quebec$CHSLD + deces_quebec$RPA + deces_quebec$Domicile.et.Inconnu + deces_quebec$RI.et.Autres
+
+  download <- getURL("https://msss.gouv.qc.ca/professionnels/statistiques/documents/covid19/COVID19_Qc_RapportINSPQ_HistoVigie.csv", ssl.verifypeer = FALSE)
+  confirmes_quebec <- read.csv(text = download)
+  
+  
+}
+```
+
+```{r include=FALSE}
+confirmes_quebec <- confirmes_quebec %>% rename(Date = ï..Date)
+confirmes_quebec <- confirmes_quebec[-1, ]
+```
+
+```{r include=FALSE}
+previsions <- function(dsDate, dsValeurs, titre, xlab, ylab, predDays) {
+  dsInt <- dsDate
+  y <- dsValeurs
+  dfInt <- data.frame(dsInt, y)
+  colnames(dfInt) <- c("ds", "y")
+
+  m <- prophet(dfInt, yearly.seasonality = F, daily.seasonality = F)
+  future <- make_future_dataframe(m, periods = predDays)
+  forcast <- predict(m, future)
+  plot(m, forcast, xlabel = xlab, ylabel = ylab) + ggtitle(paste(titre, predictionDays, " jours"))
+}
+```
+
+```{r echo=FALSE}
+print(paste("Data dated from: ", max(canada$date)))
+```
+
+Looking at if new cases can predict hospitalisation 13 days in future.
+
+```{r}
+# 13 jours Test
+casCovidParJour <- confirmes_quebec
+casCovidParJour <- casCovidParJour[order(casCovidParJour$Date), ]
+casCovidParJour$Date <- as.Date(casCovidParJour$Date)
+hospTreizeJours <- hosp_quebec
+
+merg <- inner_join(casCovidParJour, hospTreizeJours, by = c("Date"))
+merg <- merg[order(merg$Date), ]
+# Remove start of pandemy irregular
+merg <- merg[-1:-144, ]
+
+newCases <- head(merg$Nb_Nvx_Cas, -13)
+icu <- tail(merg$ACT_Si_RSS99, -13)
+hosp <- tail(merg$ACT_Hsi_RSS99, -13)
+
+corrNewCasesIcu <- data.frame(newCases, icu)
+corrNewCasesHosp <- data.frame(newCases, hosp)
+
+ratioIcu <- mean(newCases / icu)
+ratioHosp <- mean(newCases / hosp)
+
+# Mean ratio new cases / hosp + 13 days
+# ratioHosp <- 1.97
+# ratioIcu <- 10.6
+
+
+m.icu <- lm(newCases ~ icu, data = corrNewCasesIcu)
+coeffIcu <- m.icu$coefficients[2]
+interceptIcu <- m.icu$coefficients[1]
+
+m.hosp <- lm(newCases ~ hosp, data = corrNewCasesHosp)
+coeffHosp <- m.hosp$coefficients[2]
+interceptHosp <- m.hosp$coefficients[1]
+
+merg$Date <- as.Date(merg$Date) + 13
+last13Days <- tail(merg, 13)
+last13Days$Pred_ACT_Hsi_RSS99 <- as.integer(interceptHosp + (last13Days$Nb_Nvx_Cas/coeffHosp))
+last13Days$Pred_ACT_Si_RSS99 <- as.integer(interceptIcu + (last13Days$Nb_Nvx_Cas/coeffIcu))
+last13Days <- last13Days %>% select(Date, Nb_Nvx_Cas, ACT_Hsi_RSS99, ACT_Si_RSS99, Pred_ACT_Hsi_RSS99, Pred_ACT_Si_RSS99)
+last13Days$ACT_Hsi_RSS99 <- rev(last13Days$ACT_Hsi_RSS99)
+last13Days$ACT_Si_RSS99 <- rev(last13Days$ACT_Si_RSS99)
+```
+
+Test de corrélation entre les nouveaux cas et le nombre de patients en soins intensifs 13 jours plus tard
+
+```{r}
+plot(newCases ~ icu, ylab = "Nouveaux cas", xlab = "Soins Internes 13 jours + tard")
+```
+
+```{r}
+plot(rstudent(m.icu) ~ fitted(m.icu),
+  ylab = "Résidus de Student",
+  xlab = "Valeurs prédites",
+  main = "Homogénéité des variances"
+)
+```
+
+```{r}
+qqnorm(rstudent(m.icu),
+  ylab = "Quantiles observés",
+  xlab = "Quantiles théoriques", main = "Normalité des résidus"
+)
+qqline(rstudent(m.icu))
+```
+
+```{r}
+summary(m.hosp)
+```
+
+```{r}
+summary(m.icu)
+```
+
+
+
+```{r}
+cor.test(corrNewCasesIcu$newCases, corrNewCasesIcu$icu)
+```
+
+Test de corrélation entre les nouveaux cas et le nombre de patients hospitalisés 13 jours plus tard
+
+```{r}
+plot(newCases ~ hosp, ylab = "Nouveaux cas", xlab = "Hospitalisations 13 jours + tard")
+```
+
+Test de corrélation entre les nouveaux cas et le nombre de patients hospitalisés 13 jours plus tard
+
+```{r}
+cor.test(newCases, hosp)
+```
+
+```{r}
+
+last13Days$ACT_Hsi_RSS99 <- rev(last13Days$ACT_Hsi_RSS99)
+last13Days$ACT_Si_RSS99 <- rev(last13Days$ACT_Si_RSS99)
+
+plot(last13Days$Date, last13Days$Pred_ACT_Hsi_RSS99, type = "l", col = "red", xlab = "Date", ylab = "Hospitalisations", main = "Prédiction Hospitalisations (13 Jours + Tard)", ylim = c(0, 1500))
+lines(last13Days$Date, last13Days$ACT_Hsi_RSS99, col = "blue")
+legend(c("bottomleft"), 0, legend = c("Pred + 13 jours", "- 13 jours"), col = c("red", "blue"), lty = 1:1, cex = 0.8)
+text(last13Days$Date, last13Days$Pred_ACT_Hsi_RSS99 + 25, labels = as.character(last13Days$Pred_ACT_Hsi_RSS99))
+text(median(last13Days$Date), 1200, paste("Moyenne +13 jours: ", as.integer(mean(last13Days$Pred_ACT_Hsi_RSS99))))
+text(median(last13Days$Date), 1000, paste("Moyenne -13 jours: ", as.integer(mean(last13Days$ACT_Hsi_RSS99))))
+```
+
+```{r}
+plot(last13Days$Date, last13Days$Pred_ACT_Si_RSS99, type = "l", col = "red", xlab = "Date", ylab = "Soins Intensifs", main = "Prédiction Soins Intensifs (13 Jours + Tard)", ylim = c(0, 300))
+lines(last13Days$Date, last13Days$ACT_Si_RSS99, col = "blue")
+legend(c("bottomleft"), 0, legend = c("Pred + 13 jours", "- 13 jours"), col = c("red", "blue"), lty = 1:1, cex = 0.8)
+text(last13Days$Date, last13Days$Pred_ACT_Si_RSS99 + 25, labels = as.character(last13Days$Pred_ACT_Si_RSS99))
+text(median(last13Days$Date), 250, paste("Moyenne +13 jours: ", as.integer(mean(last13Days$Pred_ACT_Si_RSS99))))
+text(median(last13Days$Date), 200, paste("Moyenne -13 jours: ", as.integer(mean(last13Days$ACT_Si_RSS99))))
+```
+
+```{r}
+plot(hosp_quebec$ACT_Si_RSS99, ylim = c(0, max(hosp_quebec$ACT_Si_RSS99)), xlim = c(0, nrow(hosp_quebec)), ylab = "Hospitalisations Soins Intensifs", xlab = "Jours", main = "Quebec: Actuel - Soins Intensifs")
+```
+
+```{r}
+previsions(hosp_quebec$Date, hosp_quebec$ACT_Si_RSS99, "Québec - Prévision Soins Intensifs ", "Date", "Patients", 90)
+```
+
+```{r}
+plot(hosp_quebec$ACT_Hsi_RSS99, ylim = c(0, max(hosp_quebec$ACT_Hsi_RSS99)), xlim = c(0, nrow(hosp_quebec)), ylab = "Hospitalisations", xlab = "Jours", main = "Quebec: Actuel - Hospitalisations")
+```
+
+```{r}
+
+previsions(hosp_quebec$Date, hosp_quebec$ACT_Hsi_RSS99, "Québec - Prévision Hospitalisations ", "Date", "Patients", 90)
+```
+
+```{r}
+plot(confirmes_quebec$Nb_Nvx_Cas, ylim = c(0, max(confirmes_quebec$Nb_Nvx_Cas)), xlim = c(0, nrow(confirmes_quebec)), ylab = "Cas", xlab = "Jours", main = "Quebec : Actuel - Cas")
+```
+
+```{r}
+previsions(confirmes_quebec$Date, confirmes_quebec$Nb_Nvx_Cas, "Québec - Prévision - Cas ", "Date", "Cas", 90)
+```
+
+```{r}
+plot(deces_quebec$total_jour, ylim = c(0, max(deces_quebec$total_jour)), xlim = c(0, nrow(deces_quebec)), ylab = "Décès", xlab = "Jours", main = "Quebec : Actuel - Décès")
+```
+
+```{r}
+previsions(deces_quebec$Date, deces_quebec$total_jour, "Québec - Prévision - Décès ", "Date", "Décès", 90)
+```
+
+```{r}
+plot(canada$total_deaths, ylab = "Nombre Morts", xlab = "Jour", xlim = c(0, 450), ylim = c(0, 30000), main = paste(country, " - Total Morts"))
+```
+
+```{r}
+plot(canada$total_cases, ylab = "Nombre Cas", xlab = "Jour", xlim = c(0, 450), , ylim = c(0, 1000000), main = paste(country, " - Total Cas"))
+```
+
+```{r}
+plot(canada$new_deaths, ylab = "Nombre Morts", xlab = "Jour", xlim = c(0, 450), ylim = c(0, 300), main = paste(country, " - Morts / Jour"))
+```
+
+```{r}
+plot(canada$new_cases, ylab = "Nombre Cas", xlab = "Jour", xlim = c(0, 450), main = paste(country, " - Nouveaux Cas / Jour"))
+```
+
+```{r}
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), , main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 100000), cex.axis = 0.75)
+points(usa$total_cases_per_million, col = "red")
+legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, 1600), cex.axis = 0.75)
+points(usa$total_deaths_per_million, col = "red")
+legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, 450), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, 1100), cex.axis = 0.75)
+points(usa$new_cases_per_million, col = "red")
+legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+plot(canada$new_deaths_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, 450), main = "New Deaths/1 Million Population per Day", col = "green", ylim = c(0, 15), cex.axis = 0.75)
+points(usa$new_deaths_per_million, col = "red")
+legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+```
+
+```{r}
+tsCan <- ts(canada$new_deaths_per_million, start = 50, class = "ts")
+plot(forecast(auto.arima(tsCan), h = 90), sub = "Forecast 90 jours")
+```
+
+```{r}
+tsCan2 <- ts(canada$new_deaths, start = 50, class = "ts")
+plot(forecast(auto.arima(tsCan2), h = 90), sub = "Forecast 90 jours", ylab = "Nb de morts par jour", xlab = "Jours")
+```
+
+```{r results="hide"}
+tsc_us <- tsc %>% filter(Country.Region == country)
+tsc_us <- data.frame(t(tsc_us))
+tsc_us <- cbind(rownames(tsc_us), data.frame(tsc_us, row.names = NULL))
+colnames(tsc_us) <- c("Date", "Confirmed")
+tsc_us <- tsc_us[-c(1:4), ]
+tsc_us$Date <- ymd(tsc_us$Date)
+tsc_us$Confirmed <- as.numeric(tsc_us$Confirmed)
+str(tsc_us)
+```
+
+```{r results="hide"}
+tsd_us <- tsd %>% filter(Country.Region == country)
+tsd_us <- data.frame(t(tsd_us))
+tsd_us <- cbind(rownames(tsd_us), data.frame(tsd_us, row.names = NULL))
+colnames(tsd_us) <- c("Date", "Confirmed")
+tsd_us <- tsd_us[-c(1:4), ]
+tsd_us$Date <- ymd(tsd_us$Date)
+tsd_us$Confirmed <- as.numeric(tsd_us$Confirmed)
+str(tsd_us)
+```
+
+```{r}
+qplot(Date, Confirmed, data = tsc_us, main = paste("Covid19 - Number of confirmed Cases in ", country))
+```
+
+```{r}
+qplot(Date, Confirmed, data = tsd_us, main = paste("Covid19 - Number of confirmed deaths in ", country))
+```
+
+```{r}
+ds <- tsc_us$Date
+y <- tsc_us$Confirmed
+df <- data.frame(ds, y)
+colnames(df) <- c("ds", "y")
+
+ds2 <- tsd_us$Date
+y2 <- tsd_us$Confirmed
+df2 <- data.frame(ds2, y2)
+colnames(df2) <- c("ds", "y")
+
+tsd_us$delta <- c(NA, diff(tsd_us$Confirmed, lag = 1))
+tsd_us$month <- format(as.Date(tsd_us$Date), "%m")
+tsd_us$week <- week(as.Date(tsd_us$Date))
+tsd_us$delta[is.na(tsd_us$delta)] <- 0
+```
+
+```{r}
+dfChunked <- df[-(1:100), , drop = FALSE]
+m <- prophet(dfChunked, yearly.seasonality = F, daily.seasonality = F)
+future <- make_future_dataframe(m, periods = predictionDays)
+forcast <- predict(m, future)
+plot(m, forcast, xlabel = "Date", ylabel = "Cases") + ggtitle(paste(country, " - Predicted Covid Caseses ", predictionDays, " days"))
+```
+
+```{r}
+dfChunked2 <- df2[-(1:100), , drop = FALSE]
+m2 <- prophet(dfChunked2, yearly.seasonality = F, daily.seasonality = F)
+future2 <- make_future_dataframe(m2, periods = predictionDays)
+forcast2 <- predict(m2, future2)
+plot(m2, forcast2, xlabel = "Date", ylabel = "Deaths") + ggtitle(paste(country, " - Predicted Covid Deaths ", predictionDays, " days"))
+```
+
+```{r}
+dyplot.prophet(m, forcast,
+  main = paste(country, " - Predicted Covid Cases ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Cases"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+
+```{r}
+dyplot.prophet(m2, forcast2,
+  main = paste(country, " - Predicted Covid Deaths ", predictionDays, " days - FB Prophet"),
+  xlab = "Date", ylab = "Deaths"
+) %>% dyOptions(maxNumberWidth = 20)
+```
+
+# FB Prophet
+
+```{r}
+prophet_plot_components(m, forcast)
+```
+
+## US Deaths
+
+```{r}
+prophet_plot_components(m2, forcast2)
+```
+
+```{r}
+l <- nrow(dfChunked)
+pred <- forcast$yhat[1:l]
+actual <- m$history$y
+plot(actual, pred, main = paste(country, " Cases - Prediction vs Actual"))
+abline(lm(pred ~ actual), col = "red")
+```
+
+```{r}
+pred2 <- forcast2$yhat[1:l]
+actual2 <- m2$history$y
+plot(actual2, pred2, main = paste(country, " Deaths - Prediction vs Actual"))
+abline(lm(pred2 ~ actual2), col = "red")
+```
+
+```{r}
+summary(lm(pred ~ actual))
+```
+
+```{r}
+summary(lm(pred2 ~ actual2))
+```
+
+rmarkdown::render("COVID_CANADA.Rmd")

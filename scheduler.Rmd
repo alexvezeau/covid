@@ -1,0 +1,25 @@
+---
+title: "Scheduler"
+output: html_notebook
+---
+
+```{r}
+library(taskscheduleR)
+```
+
+```{r}
+taskscheduler_delete("covidSchedule")
+taskscheduler_create(taskname = "covidSchedule", rscript = "C:/BIGDATA/LEARNING/PERSONNAL/COVID/publish.R", 
+                     schedule = "DAILY", starttime = "06:00", startdate = format(Sys.Date() + 1, "%Y/%m/%d"))
+```
+
+```{r}
+result <- taskscheduler_ls()
+
+```
+
+```{r}
+mylog <- system.file("extdata", "publish.log", package = "taskscheduleR")
+logs <- cat(readLines(mylog), sep = "\n")
+```
+

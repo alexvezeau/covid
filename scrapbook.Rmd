@@ -1,0 +1,76 @@
+---
+title: "Scrapbook"
+output: html_notebook
+---
+
+# Generate Sample Data #  
+
+```{r}
+library(generator)
+library(digest)
+```
+
+```{r}
+emails <- as.data.frame(r_email_addresses(50))
+colnames(emails) <- c("email")
+```
+
+
+```{r}
+emails$hash <- unlist(lapply(emails$email,function(x) digest(x, algo = c("sha256"))))
+emails
+```
+
+
+```{r}
+ visdat::vis_dat(deces_quebec,sort_type = FALSE) 
+```
+
+```{r}
+ visdat::vis_miss(deces_quebec)
+```
+
+```{r}
+funModeling::plot_num(deces_quebec)
+```
+
+```{r}
+inspectdf::inspect_cat(deces_quebec)
+```
+
+```{r}
+dlookr::diagnose_outlier(deces_quebec)
+```
+
+```{r}
+dlookr::plot_outlier(deces_quebec)
+```
+
+```{r}
+#PerformanceAnalytics::chart.Correlation(ag, histogram = TRUE, pch = 15)
+DataExplorer::create_report(deces_quebec)
+```
+
+```{r}
+emails <- generator::r_email_addresses(300)
+emails <- emails %>% rename(email = x)
+write.csv(x = emails, file = "c:/tmp/sample.csv", quote = FALSE, row.names = FALSE)
+```
+
+Python + R
+
+```{r}
+```
+
+```{python}
+x = 5
+y = "John"
+r.
+```
+```{r}
+library(tidyverse)
+df <- tibble(
+  a = 1:10
+)
+```
+
