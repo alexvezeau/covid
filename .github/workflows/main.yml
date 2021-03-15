@@ -18,7 +18,7 @@ jobs:
     - uses: r-lib/actions/setup-r@master
 
     # Set-up R
-    - name: Install packages
+    - name: Install R packages
       run: |
         R -e 'install.packages("tidyverse")'
         R -e 'install.packages("janitor")'
@@ -43,8 +43,12 @@ jobs:
         R -e 'install.packages("listviewer")'
         R -e 'install.packages("rstudioapi")'
         R -e 'install.packages("rlist")'
+    # Set-up Pandoc
+    - name: Install Pandoc
+      run: brew install pandoc
+      
     # Run R script
-    - name: Scrape
+    - name: Publish
       run: Rscript publish.R
       
  # Add new files in data folder, commit along with other modified files, push
