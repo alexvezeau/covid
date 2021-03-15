@@ -4,7 +4,7 @@ name: nifty50scrape
 # Controls when the action will run.
 on:
   schedule:
-    - cron:  '0 13 * * *'
+    - cron:  '0 17 * * *'
 
 
 jobs: 
@@ -23,6 +23,26 @@ jobs:
         R -e 'install.packages("tidyverse")'
         R -e 'install.packages("janitor")'
         R -e 'install.packages("rvest")'
+        R -e 'install.packages("rpubs")'
+        R -e 'install.packages("rsconnect")'
+        R -e 'install.packages("rmarkdown")'
+        R -e 'install.packages("ggplot2")'
+        R -e 'install.packages("forecast")'
+        R -e 'install.packages("fpp2")'
+        R -e 'install.packages("TTR")'
+        R -e 'install.packages("dplyr")'
+        R -e 'install.packages("tstools")'
+        R -e 'install.packages("RCurl")'
+        R -e 'install.packages("tidyverse")'
+        R -e 'install.packages("covid19.analytics")'
+        R -e 'install.packages("prophet")'
+        R -e 'install.packages("lubridate")'
+        R -e 'install.packages("dygraphs")'
+        R -e 'install.packages("rjson")'
+        R -e 'install.packages("jsonlight")'
+        R -e 'install.packages("listviewer")'
+        R -e 'install.packages("rstudioapi")'
+        R -e 'install.packages("rlist")'
     # Run R script
     - name: Scrape
       run: Rscript publish.R
