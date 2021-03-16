@@ -1,5 +1,5 @@
 # Hourly scraping
-name: nifty50scrape
+name: covidPublish
 
 # Controls when the action will run.
 on:
@@ -31,7 +31,6 @@ jobs:
         R -e 'install.packages("fpp2")'
         R -e 'install.packages("TTR")'
         R -e 'install.packages("dplyr")'
-        R -e 'install.packages("tstools")'
         R -e 'install.packages("RCurl")'
         R -e 'install.packages("tidyverse")'
         R -e 'install.packages("covid19.analytics")'
