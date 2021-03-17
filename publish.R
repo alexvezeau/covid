@@ -1,6 +1,7 @@
 library(rpubs)
 library(rsconnect)
 library(rmarkdown)
+library(tstools)
 
 options(echo = TRUE)
 

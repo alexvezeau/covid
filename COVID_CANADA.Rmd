@@ -30,6 +30,7 @@ library(covid19.analytics)
 library(prophet)
 library(lubridate)
 library(dygraphs)
+library(tstools)
 ```
 
 ```{r constants}
