@@ -43,7 +43,7 @@ jobs:
         R -e 'install.packages("rstudioapi")'
         R -e 'install.packages("rlist")'
         R -e 'install.packages("devtools")'
-        R -e 'devtools::install_github("trnnick/TStools")'
+
     # Set-up Pandoc
     - name: Install Pandoc
       run: brew install pandoc
