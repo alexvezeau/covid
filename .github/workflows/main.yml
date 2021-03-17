@@ -8,7 +8,7 @@ on:
 
 
 jobs: 
-  autoscrape:
+  publish_covid_data:
     # The type of runner that the job will run on
     runs-on: macos-latest
 
