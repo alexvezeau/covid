@@ -27,7 +27,6 @@ library(forecast)
 library(fpp2)
 library(TTR)
 library(dplyr)
-library(tstools)
 library(RCurl)
 library(tidyverse)
 library(covid19.analytics)
@@ -40,6 +39,7 @@ library(listviewer)
 library(rstudioapi)
 library(rlist)
 ```
+
 
 
 ```{r constants,results="hide", echo=FALSE, include=FALSE}
