@@ -34,7 +34,7 @@ jobs:
         R -e 'install.packages("RCurl")'
         R -e 'install.packages("tidyverse")'
         R -e 'install.packages("covid19.analytics")'
-        R -e 'install.packages("prophet")'
+        R -e 'install.packages("prophet", type="source")'
         R -e 'install.packages("lubridate")'
         R -e 'install.packages("dygraphs")'
         R -e 'install.packages("rjson")'
