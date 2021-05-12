@@ -112,7 +112,7 @@ plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, 350000), xlab = "Day", xl
 ```
 
 ```{r}
-plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 90000), cex.axis = 0.75)
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, 450), main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 120000), cex.axis = 0.75)
 points(usa$total_cases_per_million, col = "red")
 legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
