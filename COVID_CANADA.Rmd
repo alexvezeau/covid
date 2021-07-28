@@ -37,7 +37,9 @@ predictionDays <- 90
 country <- "Canada"
 population <- 37590000
 noCache <- TRUE
-
+limNbCases <- 1500
+limNbDeaths <- 2000
+limNbDeathsYear <- 150000
 
 ```
 
@@ -259,19 +261,19 @@ plot(canada$new_cases, ylab = "Nombre Cas", xlab = "Jour", xlim = c(0, nrow(cana
 ```
 
 ```{r}
-plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), , main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 100000), cex.axis = 0.75)
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), , main = "Total Cases /1 Million Population", col = "green", ylim = c(0, limNbDeathsYear), cex.axis = 0.75)
 points(usa$total_cases_per_million, col = "red")
 legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
 
 ```{r}
-plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, 1600), cex.axis = 0.75)
+plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, limNbDeaths), cex.axis = 0.75)
 points(usa$total_deaths_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
 
 ```{r}
-plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(canada)), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, 1100), cex.axis = 0.75)
+plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(canada)), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, limNbCases), cex.axis = 0.75)
 points(usa$new_cases_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
