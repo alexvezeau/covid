@@ -57,7 +57,7 @@ if (noCache) {
   download <- getURL("https://msss.gouv.qc.ca/professionnels/statistiques/documents/covid19/COVID19_Qc_HistoHospit.csv", ssl.verifypeer = FALSE)
   hosp_quebec <- read.csv(text = download)
   hosp_quebec <- hosp_quebec %>% rename("Date" = "ï..Date")
-  hosp_quebec$Date <- as.Date(hosp_quebec$Date, "%m/%d/%Y")
+  hosp_quebec$Date <- as.Date(hosp_quebec$Date, "%Y-%m-%d")
   hosp_quebec <- hosp_quebec[order(hosp_quebec$Date), ]
   download <- getURL("https://cdn-contenu.quebec.ca/cdn-contenu/sante/documents/Problemes_de_sante/covid-19/csv/decesquotidien.csv", ssl.verifypeer = FALSE)
   deces_quebec <- read.csv(text = download, sep = ";")
@@ -97,7 +97,7 @@ print(paste("Data dated from: ", max(canada$date)))
 
 Looking at if new cases can predict hospitalisation 13 days in future.
 
-```{r}
+```{r 13joursTest}
 # 13 jours Test
 casCovidParJour <- confirmes_quebec
 casCovidParJour <- casCovidParJour[order(casCovidParJour$Date), ]
