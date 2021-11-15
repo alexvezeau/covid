@@ -104,7 +104,7 @@ plot(usa$total_deaths, ylab = "Number Deaths", xlab = "Day", xlim = c(0, limDays
 ```{r}
 options(scipen = 999)
 usa$total_cases[is.na(usa$total_cases)] <- 0
-plot(format(usa$total_cases, scientific = FALSE), ylab = "Number Cases", xlab = "Day", xlim = c(0, limDays), main = "US - Total Cases", ylim = c(min(usa$total_cases), max(usa$total_cases)), cex.axis = 0.75, col = "red")
+plot(format(usa$total_cases, scientific = FALSE), ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(usa)), main = "US - Total Cases", ylim = c(min(usa$total_cases), max(usa$total_cases)), cex.axis = 0.75, col = "red")
 ```
 
 ```{r}
@@ -112,17 +112,17 @@ plot(usa$new_deaths, ylab = "Number Deaths", ylim = c(0, 5000), xlab = "Day", xl
 ```
 
 ```{r}
-plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, 350000), xlab = "Day", xlim = c(0, limDays), main = "US - New Cases / Day", col = "red")
+plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, 350000), xlab = "Day", xlim = c(0, nrow(usa)), main = "US - New Cases / Day", col = "red")
 ```
 
 ```{r}
-plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, limDays), main = "Total Cases /1 Million Population", col = "green", ylim = c(0, 120000), cex.axis = 0.75)
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(usa)), main = "Total Cases /1 Million Population", col = "green", ylim = c(0, max(usa$total_cases_per_million)), cex.axis = 0.75)
 points(usa$total_cases_per_million, col = "red")
 legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
 
 ```{r}
-plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, limDays), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, 2000), cex.axis = 0.75)
+plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(usa)), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, max(usa$total_deaths_per_million, na.rm = T)), cex.axis = 0.75)
 points(usa$total_deaths_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
@@ -135,9 +135,9 @@ legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, c
 ```
 
 ```{r}
-plot(canada$new_deaths_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, limDays), main = "New Deaths/1 Million Population per Day", col = "green", ylim = c(0, 15), cex.axis = 0.75)
+plot(canada$new_deaths_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(usa)), main = "New Deaths/1 Million Population per Day", col = "green", ylim = c(0, max(usa$new_deaths_per_million, na.rm = T)), cex.axis = 0.75)
 points(usa$new_deaths_per_million, col = "red")
-legend(1, 15, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
+legend(1, 12, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
 
 ```{r}
