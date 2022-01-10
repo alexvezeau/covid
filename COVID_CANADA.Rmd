@@ -43,7 +43,6 @@ limNbDeathsYear <- 150000
 
 ```
 
-
 ```{r load_data, include=FALSE, results="hide"}
 if (noCache) {
   covid <- read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
@@ -171,8 +170,6 @@ summary(m.hosp)
 summary(m.icu)
 ```
 
-
-
 ```{r}
 cor.test(corrNewCasesIcu$newCases, corrNewCasesIcu$icu)
 ```
@@ -180,35 +177,7 @@ cor.test(corrNewCasesIcu$newCases, corrNewCasesIcu$icu)
 Test de corrélation entre les nouveaux cas et le nombre de patients hospitalisés 13 jours plus tard
 
 ```{r}
-plot(newCases ~ hosp, ylab = "Nouveaux cas", xlab = "Hospitalisations 13 jours + tard")
-```
-
-Test de corrélation entre les nouveaux cas et le nombre de patients hospitalisés 13 jours plus tard
-
-```{r}
 cor.test(newCases, hosp)
-```
-
-```{r}
-
-last13Days$ACT_Hsi_RSS99 <- rev(last13Days$ACT_Hsi_RSS99)
-last13Days$ACT_Si_RSS99 <- rev(last13Days$ACT_Si_RSS99)
-
-plot(last13Days$Date, last13Days$Pred_ACT_Hsi_RSS99, type = "l", col = "red", xlab = "Date", ylab = "Hospitalisations", main = "Prédiction Hospitalisations (13 Jours + Tard)", ylim = c(0, 1500))
-lines(last13Days$Date, last13Days$ACT_Hsi_RSS99, col = "blue")
-legend(c("bottomleft"), 0, legend = c("Pred + 13 jours", "- 13 jours"), col = c("red", "blue"), lty = 1:1, cex = 0.8)
-text(last13Days$Date, last13Days$Pred_ACT_Hsi_RSS99 + 25, labels = as.character(last13Days$Pred_ACT_Hsi_RSS99))
-text(median(last13Days$Date), 1200, paste("Moyenne +13 jours: ", as.integer(mean(last13Days$Pred_ACT_Hsi_RSS99))))
-text(median(last13Days$Date), 1000, paste("Moyenne -13 jours: ", as.integer(mean(last13Days$ACT_Hsi_RSS99))))
-```
-
-```{r}
-plot(last13Days$Date, last13Days$Pred_ACT_Si_RSS99, type = "l", col = "red", xlab = "Date", ylab = "Soins Intensifs", main = "Prédiction Soins Intensifs (13 Jours + Tard)", ylim = c(0, 300))
-lines(last13Days$Date, last13Days$ACT_Si_RSS99, col = "blue")
-legend(c("bottomleft"), 0, legend = c("Pred + 13 jours", "- 13 jours"), col = c("red", "blue"), lty = 1:1, cex = 0.8)
-text(last13Days$Date, last13Days$Pred_ACT_Si_RSS99 + 25, labels = as.character(last13Days$Pred_ACT_Si_RSS99))
-text(median(last13Days$Date), 250, paste("Moyenne +13 jours: ", as.integer(mean(last13Days$Pred_ACT_Si_RSS99))))
-text(median(last13Days$Date), 200, paste("Moyenne -13 jours: ", as.integer(mean(last13Days$ACT_Si_RSS99))))
 ```
 
 ```{r}
@@ -261,7 +230,7 @@ plot(canada$new_cases, ylab = "Nombre Cas", xlab = "Jour", xlim = c(0, nrow(cana
 ```
 
 ```{r}
-plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), , main = "Total Cases /1 Million Population", col = "green", ylim = c(0, limNbDeathsYear), cex.axis = 0.75)
+plot(canada$total_cases_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), , main = "Total Cases /1 Million Population", col = "green", ylim = c(0, max(usa$total_cases_per_million, na.rm = T)), cex.axis = 0.75)
 points(usa$total_cases_per_million, col = "red")
 legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
