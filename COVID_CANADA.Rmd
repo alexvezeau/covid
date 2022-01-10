@@ -214,7 +214,7 @@ previsions(deces_quebec$Date, deces_quebec$total_jour, "Québec - Prévision - D
 ```
 
 ```{r}
-plot(canada$total_deaths, ylab = "Nombre Morts", xlab = "Jour", xlim = c(0, nrow(canada)), ylim = c(0, 30000), main = paste(country, " - Total Morts"))
+plot(canada$total_deaths, ylab = "Nombre Morts", xlab = "Jour", xlim = c(0, nrow(canada)), ylim = c(0, max(canada$total_deaths, na.rm = T)), main = paste(country, " - Total Morts"))
 ```
 
 ```{r}
@@ -236,7 +236,7 @@ legend(1, 40000, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1,
 ```
 
 ```{r}
-plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, limNbDeaths), cex.axis = 0.75)
+plot(canada$total_deaths_per_million, ylab = "Number Deaths", xlab = "Day", xlim = c(0, nrow(canada)), main = "Total Deaths /1 Million Population", col = "green", ylim = c(0, max(usa$total_deaths_per_million, na.rm = T)), cex.axis = 0.75)
 points(usa$total_deaths_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
