@@ -11,11 +11,9 @@ editor_options:
 always_allow_html: true
 ---
 
->  Marcelo Ponce, Amit Sandhel (2020). covid19.analytics: An R Package
->  to Obtain, Analyze and Visualize Data from the Corona Virus Disease
->  Pandemic. URL https://arxiv.org/abs/2009.01091
+> Marcelo Ponce, Amit Sandhel (2020). covid19.analytics: An R Package to Obtain, Analyze and Visualize Data from the Corona Virus Disease Pandemic. URL <https://arxiv.org/abs/2009.01091>
 
-## Analysis of current COVID data and predictions ##  
+## Analysis of current COVID data and predictions
 
 ```{r}
 rm(list = ls())
@@ -40,8 +38,6 @@ library(rstudioapi)
 library(rlist)
 ```
 
-
-
 ```{r constants,results="hide", echo=FALSE, include=FALSE}
 predictionDays <- 90
 country <- "US"
@@ -50,11 +46,8 @@ noCache <- TRUE
 limNbCases <- 1500
 limNbDeaths <- 2000
 limNbDeathsYear <- 150000
-limDays <- 600
+limDays <- 800
 ```
-
-
-
 
 ```{r load_data, results="hide", echo=FALSE, include=FALSE }
 if (noCache) {
@@ -77,6 +70,7 @@ if (noCache) {
 ```{r}
 print(paste("Data dated from: ", max(usa$date)))
 ```
+
 ```{r}
 allStatesHistory$hospitalizedCurrently[is.na(allStatesHistory$hospitalizedCurrently)] <- 0
 allStatesHistory$inIcuCurrently[is.na(allStatesHistory$inIcuCurrently)] <- 0
@@ -89,16 +83,16 @@ lines(currentlyHosp$date, currentlyHosp$icu, col = "green")
 lines(currentlyHosp$date, currentlyHosp$vent, col = "blue")
 legend(c("topleft"), 100000, legend = c("Normal Care", "ICU", "On Ventillator"), col = c("red", "green", "blue"), lty = 1:1, cex = 0.8)
 ```
+
 ```{r}
 plot(currentlyHosp$date, currentlyHosp$icu, type = "l", col = "green", xlab = "Date", ylab = "Cases", main = "ICU/Ventilator US")
 lines(currentlyHosp$date, currentlyHosp$vent, col = "blue")
 legend(c("topleft"), 100000, legend = c("ICU", "On Ventillator"), col = c("green", "blue"), lty = 1:1, cex = 0.8)
 ```
 
-
 ```{r plot_total_Deaths}
 usa$total_deaths[is.na(usa$total_deaths)] <- 0
-plot(usa$total_deaths, ylab = "Number Deaths", xlab = "Day", xlim = c(0, limDays), main = "US - Total Deaths", col = "red")
+plot(usa$total_deaths, ylab = "Number Deaths", xlab = "Day", xlim = c(0,nrow(usa)), ylim = c(0, max(usa$total_deaths,na.rm = T)), main = "US - Total Deaths", col = "red")
 ```
 
 ```{r}
@@ -112,7 +106,7 @@ plot(usa$new_deaths, ylab = "Number Deaths", ylim = c(0, 5000), xlab = "Day", xl
 ```
 
 ```{r}
-plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, 350000), xlab = "Day", xlim = c(0, nrow(usa)), main = "US - New Cases / Day", col = "red")
+plot(usa$new_cases, ylab = "Number Cases", ylim = c(0, max(max(usa$new_cases, na.rm = T))), xlab = "Day", xlim = c(0, nrow(usa)), main = "US - New Cases / Day", col = "red")
 ```
 
 ```{r}
@@ -127,9 +121,8 @@ points(usa$total_deaths_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
 
-
 ```{r}
-plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, limDays), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, 1000), cex.axis = 0.75)
+plot(canada$new_cases_per_million, ylab = "Number Cases", xlab = "Day", xlim = c(0, limDays), main = "New Cases/1 Million Population per Day", col = "green", ylim = c(0, max(canada$new_cases_per_million, na.rm = T)), cex.axis = 0.75)
 points(usa$new_cases_per_million, col = "red")
 legend(1, 800, legend = c("US", "Canada"), col = c("red", "green"), lty = 1:1, cex = 0.8)
 ```
@@ -149,7 +142,6 @@ plot(forecast(auto.arima(tsUs), h = 90), sub = "Forecast 90 Days", ylab = "Nb of
 tsUS2 <- ts(usa$new_deaths, start = 50, class = "ts")
 plot(forecast(auto.arima(tsUS2), h = 90), sub = "Forecast 90 Days", ylab = "Nb of Deaths per Day", xlab = "Days")
 ```
-
 
 ```{r results="hide"}
 tsc_us <- tsc %>% filter(Country.Region == country)
@@ -178,6 +170,7 @@ qplot(Date, Confirmed, data = tsc_us, main = paste("Covid19 - Number of confirme
 ```{r}
 qplot(Date, Confirmed, data = tsd_us, main = paste("Covid19 - Number of confirmed deaths in ", country))
 ```
+
 ```{r}
 qplot(dt, cumulative, data = florida_new_cases, main = paste("Covid19 - Number of confirmed cases in ", "Florida"))
 ```
@@ -236,7 +229,6 @@ bp <- barplot(totalCasMois$Total, main = "Total New Cases Per Month", xlab = "Mo
 text(x = bp, y = totalCasMois$Total, label = totalCasMois$Total, pos = 3, cex = 0.6, col = "red")
 ```
 
-
 ```{r}
 totalDeathsweek <- tsd_us %>%
   group_by(week) %>%
@@ -246,6 +238,7 @@ totalDeathsweek <- tsd_us %>%
 bp2 <- barplot(totalDeathsweek$Total, main = "Total New Deaths Per Week", xlab = "Week", ylab = "Total of Deaths", names.arg = totalDeathsweek$week, ylim = c(0, max(totalDeathsweek$Total) + 10000), cex.names = 0.6, las = 2)
 text(x = bp2, y = totalDeathsweek$Total, label = totalDeathsweek$Total, pos = 3, cex = 0.5, col = "red", srt = 90)
 ```
+
 ```{r}
 totalCasesweek <- tsc_us %>%
   group_by(week) %>%
@@ -255,7 +248,6 @@ totalCasesweek <- tsc_us %>%
 bp2 <- barplot(totalCasesweek$Total, main = "Total New Cases Per Week", xlab = "Week", ylab = "Total of Cases", names.arg = totalCasesweek$week, ylim = c(0, max(totalCasesweek$Total) + 250000), las = 2)
 text(x = bp2, y = totalCasesweek$Total, label = totalCasesweek$Total, pos = 3, cex = 0.5, col = "red", srt = 90)
 ```
-
 
 ```{r}
 totalDeathsDayofweek <- tsd_us %>%
@@ -311,7 +303,6 @@ forcast2 <- predict(m2, future2)
 plot(m2, forcast2, xlabel = "Date", ylabel = "Deaths") + ggtitle(paste("US - Predicted Covid Deaths ", predictionDays, " days"))
 ```
 
-
 ```{r}
 dfChunked2 <- df2[-(1:100), , drop = FALSE]
 m2 <- prophet(dfChunked2, yearly.seasonality = F, daily.seasonality = F)
@@ -329,14 +320,13 @@ dyplot.prophet(m2Fl, forcast2Fl,
 ) %>% dyOptions(maxNumberWidth = 20)
 ```
 
-
-
 ```{r}
 dyplot.prophet(m, forcast,
   main = paste(country, " - Predicted Covid Cases ", predictionDays, " days - FB Prophet"),
   xlab = "Date", ylab = "Cases"
 ) %>% dyOptions(maxNumberWidth = 20)
 ```
+
 ```{r}
 dyplot.prophet(mFl, forcastFl,
   main = paste("Florida", " - Predicted Covid Deaths ", predictionDays, " days - FB Prophet"),
@@ -344,26 +334,26 @@ dyplot.prophet(mFl, forcastFl,
 ) %>% dyOptions(maxNumberWidth = 20)
 ```
 
-
 ```{r}
 dyplot.prophet(m2, forcast2,
   main = paste(country, " - Predicted Covid Deaths ", predictionDays, " days - FB Prophet"),
   xlab = "Date", ylab = "Deaths"
 ) %>% dyOptions(maxNumberWidth = 20)
 ```
-# FB Prophet #  
 
-## US Cases ##  
+# FB Prophet
+
+## US Cases
 
 ```{r}
 prophet_plot_components(m, forcast)
 ```
-## US Deaths ##  
+
+## US Deaths
 
 ```{r}
 prophet_plot_components(m2, forcast2)
 ```
-
 
 ```{r}
 l <- nrow(dfChunked)
@@ -387,6 +377,5 @@ summary(lm(pred ~ actual))
 ```{r}
 summary(lm(pred2 ~ actual2))
 ```
-
 
 rmarkdown::render("C:/BIGDATA/LEARNING/PERSONNAL/COVID/COVID_US.Rmd")
