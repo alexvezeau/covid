@@ -47,6 +47,8 @@ limNbCases <- 1500
 limNbDeaths <- 2000
 limNbDeathsYear <- 150000
 limDays <- 800
+
+options(scipen = 999)
 ```
 
 ```{r load_data, results="hide", echo=FALSE, include=FALSE }
@@ -96,9 +98,8 @@ plot(usa$total_deaths, ylab = "Number Deaths", xlab = "Day", xlim = c(0,nrow(usa
 ```
 
 ```{r}
-options(scipen = 999)
 usa$total_cases[is.na(usa$total_cases)] <- 0
-plot(format(usa$total_cases, scientific = FALSE), ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(usa)), main = "US - Total Cases", ylim = c(min(usa$total_cases), max(usa$total_cases)), cex.axis = 0.75, col = "red")
+plot(format(usa$total_cases, scientific = FALSE), ylab = "Number Cases", xlab = "Day", xlim = c(0, nrow(usa)), main = "US - Total Cases", ylim = c(min(usa$total_cases), max(usa$total_cases)), cex.axis = 0.50, col = "red")
 ```
 
 ```{r}
